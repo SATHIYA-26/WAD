@@ -1,0 +1,89 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Bingo Game</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <main class="game">
+    <header>
+      <p class="eyebrow">LET'S PLAY</p>
+      <h1>Bingo!</h1>
+      <p class="subtitle">Mark the numbers as they are called.</p>
+    </header>
+
+    <section class="called-card" aria-live="polite">
+      <span>NUMBER CALLED</span>
+      <strong id="calledNumber">--</strong>
+      <button id="callButton" type="button">Call Number</button>
+    </section>
+
+    <section class="board-wrap">
+      <div class="bingo-heading" aria-hidden="true">
+        <span>B</span><span>I</span><span>N</span><span>G</span><span>O</span>
+      </div>
+      <div id="board" class="board" aria-label="Bingo board"></div>
+    </section>
+
+    <footer>
+      <p id="status">Press “Call Number” to begin.</p>
+      <button id="resetButton" class="secondary" type="button">New Game</button>
+    </footer>
+  </main>
+  <script>
+    const board = document.querySelector('#board');
+    const calledNumber = document.querySelector('#calledNumber');
+    const status = document.querySelector('#status');
+    const callButton = document.querySelector('#callButton');
+    const usedNumbers = new Set();
+
+    function buildBoard() {
+      board.innerHTML = '';
+      const numbers = [];
+      while (numbers.length < 25) {
+        const n = Math.floor(Math.random() * 75) + 1;
+        if (!numbers.includes(n)) numbers.push(n);
+      }
+      numbers.forEach((number, index) => {
+        const cell = document.createElement('button');
+        cell.type = 'button';
+        cell.className = 'cell';
+        cell.textContent = index === 12 ? 'FREE' : number;
+        if (index === 12) cell.classList.add('free', 'marked');
+        cell.dataset.number = index === 12 ? 'FREE' : number;
+        cell.addEventListener('click', () => {
+          if (cell.dataset.number === 'FREE') return;
+          cell.classList.toggle('marked');
+        });
+        board.appendChild(cell);
+      });
+    }
+
+    function callNumber() {
+      if (usedNumbers.size === 75) {
+        status.textContent = 'All numbers have been called. Start a new game!';
+        return;
+      }
+      let n;
+      do { n = Math.floor(Math.random() * 75) + 1; } while (usedNumbers.has(n));
+      usedNumbers.add(n);
+      calledNumber.textContent = n;
+      status.textContent = `${usedNumbers.size} of 75 numbers called. Mark it on your board!`;
+      callButton.textContent = 'Call Next Number';
+    }
+
+    callButton.addEventListener('click', callNumber);
+    document.querySelector('#resetButton').addEventListener('click', () => {
+      usedNumbers.clear();
+      calledNumber.textContent = '--';
+      status.textContent = 'Press “Call Number” to begin.';
+      callButton.textContent = 'Call Number';
+      buildBoard();
+    });
+
+    buildBoard();
+  </script>
+</body>
+</html>
