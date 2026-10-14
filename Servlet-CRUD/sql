@@ -11,3 +11,6 @@ CREATE TABLE students (
 start my sql and tomcat
 
 mysql -u root -p -h 127.0.0.1
+
+javac -cp "$CATALINA_HOME/lib/servlet-api.jar:WEB-INF/lib/mysql-connector-j.jar" \
+-d WEB-INF/classes src/DatabaseServlet.java
