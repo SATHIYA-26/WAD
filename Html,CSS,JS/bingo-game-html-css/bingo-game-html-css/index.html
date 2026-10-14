@@ -1,89 +1,225 @@
+```html
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Bingo Game</title>
-  <link rel="stylesheet" href="style.css">
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Bingo Game</title>
+    <link rel="stylesheet" href="style.css">
 </head>
 <body>
-  <main class="game">
-    <header>
-      <p class="eyebrow">LET'S PLAY</p>
-      <h1>Bingo!</h1>
-      <p class="subtitle">Mark the numbers as they are called.</p>
-    </header>
+    <main class="game">
+        <header>
+            <p class="eyebrow">LET'S PLAY</p>
+            <h1>Bingo!</h1>
+            <p class="subtitle">Mark the numbers and complete a line!</p>
+        </header>
 
-    <section class="called-card" aria-live="polite">
-      <span>NUMBER CALLED</span>
-      <strong id="calledNumber">--</strong>
-      <button id="callButton" type="button">Call Number</button>
-    </section>
+        <section class="called-card">
+            <span>NUMBER CALLED</span>
+            <strong id="calledNumber">--</strong>
+            <button id="callButton">Call Number</button>
+        </section>
 
-    <section class="board-wrap">
-      <div class="bingo-heading" aria-hidden="true">
-        <span>B</span><span>I</span><span>N</span><span>G</span><span>O</span>
-      </div>
-      <div id="board" class="board" aria-label="Bingo board"></div>
-    </section>
+        <section class="board-wrap">
+            <div class="bingo-heading">
+                <span>B</span><span>I</span><span>N</span>
+                <span>G</span><span>O</span>
+            </div>
+            <div id="board" class="board"></div>
+        </section>
 
-    <footer>
-      <p id="status">Press “Call Number” to begin.</p>
-      <button id="resetButton" class="secondary" type="button">New Game</button>
-    </footer>
-  </main>
-  <script>
-    const board = document.querySelector('#board');
-    const calledNumber = document.querySelector('#calledNumber');
-    const status = document.querySelector('#status');
-    const callButton = document.querySelector('#callButton');
-    const usedNumbers = new Set();
+        <footer>
+            <p id="status">Click Call Number to start!</p>
+            <button id="resetButton" class="secondary">New Game</button>
+        </footer>
+    </main>
 
-    function buildBoard() {
-      board.innerHTML = '';
-      const numbers = [];
-      while (numbers.length < 25) {
-        const n = Math.floor(Math.random() * 75) + 1;
-        if (!numbers.includes(n)) numbers.push(n);
-      }
-      numbers.forEach((number, index) => {
-        const cell = document.createElement('button');
-        cell.type = 'button';
-        cell.className = 'cell';
-        cell.textContent = index === 12 ? 'FREE' : number;
-        if (index === 12) cell.classList.add('free', 'marked');
-        cell.dataset.number = index === 12 ? 'FREE' : number;
-        cell.addEventListener('click', () => {
-          if (cell.dataset.number === 'FREE') return;
-          cell.classList.toggle('marked');
-        });
-        board.appendChild(cell);
-      });
-    }
+    <script>
+        const board = document.getElementById("board");
+        const calledNumber = document.getElementById("calledNumber");
+        const status = document.getElementById("status");
+        const callButton = document.getElementById("callButton");
+        const resetButton = document.getElementById("resetButton");
 
-    function callNumber() {
-      if (usedNumbers.size === 75) {
-        status.textContent = 'All numbers have been called. Start a new game!';
-        return;
-      }
-      let n;
-      do { n = Math.floor(Math.random() * 75) + 1; } while (usedNumbers.has(n));
-      usedNumbers.add(n);
-      calledNumber.textContent = n;
-      status.textContent = `${usedNumbers.size} of 75 numbers called. Mark it on your board!`;
-      callButton.textContent = 'Call Next Number';
-    }
+        let calledNumbers = [];
+        let markedNumbers = new Set(["FREE"]);
+        let gameOver = false;
 
-    callButton.addEventListener('click', callNumber);
-    document.querySelector('#resetButton').addEventListener('click', () => {
-      usedNumbers.clear();
-      calledNumber.textContent = '--';
-      status.textContent = 'Press “Call Number” to begin.';
-      callButton.textContent = 'Call Number';
-      buildBoard();
-    });
+        // Create a standard 5 x 5 Bingo board.
+        // B: 1-15, I: 16-30, N: 31-45,
+        // G: 46-60, O: 61-75.
+        function createBoard() {
+            board.innerHTML = "";
+            const columns = [
+                [1, 15], [16, 30], [31, 45],
+                [46, 60], [61, 75]
+            ];
 
-    buildBoard();
-  </script>
+            const numbers = [];
+
+            for (let col = 0; col < 5; col++) {
+                const columnNumbers = [];
+                while (columnNumbers.length < 5) {
+                    const number = Math.floor(
+                        Math.random() * (columns[col][1] - columns[col][0] + 1)
+                    ) + columns[col][0];
+
+                    if (!columnNumbers.includes(number)) {
+                        columnNumbers.push(number);
+                    }
+                }
+                numbers.push(columnNumbers);
+            }
+
+            // Fill the board row by row.
+            for (let row = 0; row < 5; row++) {
+                for (let col = 0; col < 5; col++) {
+                    const cell = document.createElement("button");
+                    const number = numbers[col][row];
+
+                    cell.type = "button";
+                    cell.className = "cell";
+
+                    if (row === 2 && col === 2) {
+                        cell.textContent = "FREE";
+                        cell.dataset.number = "FREE";
+                        cell.classList.add("free", "marked");
+                    } else {
+                        cell.textContent = number;
+                        cell.dataset.number = number;
+                    }
+
+                    cell.addEventListener("click", () => markCell(cell));
+                    board.appendChild(cell);
+                }
+            }
+        }
+
+        // Mark a number only if it has been called.
+        function markCell(cell) {
+            if (gameOver || cell.dataset.number === "FREE") {
+                return;
+            }
+
+            const number = Number(cell.dataset.number);
+
+            if (!calledNumbers.includes(number)) {
+                status.textContent = "Wait until this number is called!";
+                return;
+            }
+
+            if (markedNumbers.has(number)) {
+                return;
+            }
+
+            markedNumbers.add(number);
+            cell.classList.add("marked");
+
+            if (checkBingo()) {
+                gameOver = true;
+                status.textContent = "BINGO! 🎉 You completed a line!";
+                callButton.disabled = true;
+            } else {
+                status.textContent = "Good! Keep marking your called numbers.";
+            }
+        }
+
+        // Call a random number from 1 to 75 without repetition.
+        function callNumber() {
+            if (gameOver) return;
+
+            if (calledNumbers.length === 75) {
+                status.textContent = "All numbers have been called!";
+                callButton.disabled = true;
+                return;
+            }
+
+            let number;
+
+            do {
+                number = Math.floor(Math.random() * 75) + 1;
+            } while (calledNumbers.includes(number));
+
+            calledNumbers.push(number);
+            calledNumber.textContent = number;
+            callButton.textContent = "Call Next Number";
+
+            status.textContent =
+                "Number " + number + " called! Mark it if it is on your board.";
+        }
+
+        // Check all rows, columns and both diagonals.
+        function checkBingo() {
+            const cells = [...board.children];
+            const isMarked = index =>
+                markedNumbers.has(cells[index].dataset.number === "FREE"
+                    ? "FREE"
+                    : Number(cells[index].dataset.number));
+
+            // Check rows.
+            for (let row = 0; row < 5; row++) {
+                let complete = true;
+
+                for (let col = 0; col < 5; col++) {
+                    if (!isMarked(row * 5 + col)) {
+                        complete = false;
+                        break;
+                    }
+                }
+
+                if (complete) return true;
+            }
+
+            // Check columns.
+            for (let col = 0; col < 5; col++) {
+                let complete = true;
+
+                for (let row = 0; row < 5; row++) {
+                    if (!isMarked(row * 5 + col)) {
+                        complete = false;
+                        break;
+                    }
+                }
+
+                if (complete) return true;
+            }
+
+            // Check diagonal from top-left to bottom-right.
+            let diagonal1 = true;
+            for (let i = 0; i < 5; i++) {
+                if (!isMarked(i * 5 + i)) diagonal1 = false;
+            }
+            if (diagonal1) return true;
+
+            // Check diagonal from top-right to bottom-left.
+            let diagonal2 = true;
+            for (let i = 0; i < 5; i++) {
+                if (!isMarked(i * 5 + (4 - i))) diagonal2 = false;
+            }
+
+            return diagonal2;
+        }
+
+        // Start a fresh game.
+        function newGame() {
+            calledNumbers = [];
+            markedNumbers = new Set(["FREE"]);
+            gameOver = false;
+
+            calledNumber.textContent = "--";
+            callButton.textContent = "Call Number";
+            callButton.disabled = false;
+            status.textContent = "Click Call Number to start!";
+
+            createBoard();
+        }
+
+        callButton.addEventListener("click", callNumber);
+        resetButton.addEventListener("click", newGame);
+
+        newGame();
+    </script>
 </body>
 </html>
+```
